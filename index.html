@@ -1,0 +1,697 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <title>Flashcard App + AI</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #2563eb;
+            --primary-dark: #1e40af;
+            --bg: #f8fafc;
+            --card: #ffffff;
+            --muted: #6b7280;
+            --danger: #ef4444;
+            --ok: #16a34a;
+            --radius: 14px;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: 'Inter', system-ui, sans-serif;
+            background: var(--bg);
+            color: #0f172a;
+            padding: 32px 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 6px;
+            text-align: center;
+            color: var(--primary);
+        }
+
+        .sub {
+            text-align: center;
+            color: var(--muted);
+            margin-bottom: 32px;
+            font-size: 15px;
+        }
+
+        .panel {
+            background: var(--card);
+            border-radius: var(--radius);
+            box-shadow: 0 6px 24px rgba(15, 23, 42, 0.08);
+            padding: 24px;
+            margin-bottom: 28px;
+            transition: box-shadow .3s ease;
+        }
+
+        .panel:hover {
+            box-shadow: 0 8px 28px rgba(15, 23, 42, 0.12);
+        }
+
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 18px;
+        }
+
+        @media (max-width: 800px) {
+            .grid-2 {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        label {
+            font-weight: 600;
+            font-size: 14px;
+            display: inline-block;
+            margin-bottom: 8px;
+            color: #1e293b;
+        }
+
+        input[type="text"],
+        textarea,
+        select,
+        input[type="number"] {
+            width: 100%;
+            padding: 12px 14px;
+            border: 1px solid #e2e8f0;
+            border-radius: var(--radius);
+            background: #fff;
+            outline: none;
+            font-size: 15px;
+            transition: border .2s ease, box-shadow .2s ease;
+        }
+
+        input:focus,
+        textarea:focus,
+        select:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2);
+        }
+
+        textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+
+        .btn {
+            border: 0;
+            outline: 0;
+            cursor: pointer;
+            padding: 12px 16px;
+            border-radius: var(--radius);
+            font-weight: 600;
+            font-size: 14px;
+            transition: all .2s ease;
+        }
+
+        .btn:active {
+            transform: translateY(1px);
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: #fff;
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-dark);
+        }
+
+        .btn-ghost {
+            background: #f1f5f9;
+            color: #1e293b;
+        }
+
+        .btn-ghost:hover {
+            background: #e2e8f0;
+        }
+
+        .btn-danger {
+            background: var(--danger);
+            color: #fff;
+        }
+
+        .btn-danger:hover {
+            opacity: 0.9;
+        }
+
+        .btn-ok {
+            background: var(--ok);
+            color: #fff;
+        }
+
+        .btn-ok:hover {
+            opacity: 0.9;
+        }
+
+        .btn-icon {
+            width: 38px;
+            height: 38px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            border-radius: 999px;
+        }
+
+        .qa-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr auto;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+
+        @media (max-width: 700px) {
+            .qa-row {
+                grid-template-columns: 1fr;
+            }
+
+            .qa-row .btn-icon {
+                width: 100%;
+            }
+        }
+
+        .deck-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--primary-dark);
+            margin-bottom: 6px;
+            cursor: pointer;
+            transition: color .2s ease;
+        }
+
+        .deck-title:hover {
+            color: var(--primary);
+        }
+
+        .deck-meta {
+            color: var(--muted);
+            font-size: 13px;
+            margin-bottom: 14px;
+        }
+
+        .flashcards {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 16px;
+        }
+
+        .card {
+            position: relative;
+            height: 160px;
+            perspective: 1000px;
+            cursor: pointer;
+            transition: transform .2s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-4px);
+        }
+
+        .card-inner {
+            position: absolute;
+            inset: 0;
+            transition: transform .6s;
+            transform-style: preserve-3d;
+        }
+
+        .card.flipped .card-inner {
+            transform: rotateY(180deg);
+        }
+
+        .face {
+            position: absolute;
+            inset: 0;
+            background: #fff;
+            border: 1px solid #e2e8f0;
+            border-radius: var(--radius);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 14px;
+            text-align: center;
+            font-size: 15px;
+            backface-visibility: hidden;
+            box-shadow: 0 4px 8px rgba(15, 23, 42, 0.06);
+        }
+
+        .back {
+            background: #f8fafc;
+            transform: rotateY(180deg);
+        }
+
+        .card .del {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            border: 0;
+            background: var(--danger);
+            color: #fff;
+            border-radius: 999px;
+            width: 26px;
+            height: 26px;
+            font-weight: 700;
+            cursor: pointer;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .toolbar {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            align-items: center;
+            margin-top: 14px;
+        }
+
+        .muted {
+            color: var(--muted);
+            font-size: 13px;
+        }
+
+        .inline-note {
+            font-size: 12px;
+            color: var(--muted);
+            margin-top: 6px;
+        }
+
+        .status {
+            font-size: 13px;
+            color: var(--muted);
+            display: inline-flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .spinner {
+            width: 16px;
+            height: 16px;
+            border-radius: 999px;
+            border: 2px solid #cbd5e1;
+            border-top-color: var(--primary);
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .section-title {
+            font-weight: 700;
+            font-size: 16px;
+            margin: 0 0 14px;
+            color: #0f172a;
+        }
+
+        .sep {
+            height: 1px;
+            background: #e5e7eb;
+            margin: 16px 0;
+        }
+    </style>
+</head>
+
+<body class="font-sans text-gray-800">
+    <div class="container">
+        <h1>📖 Flashcards (AI Powered)</h1>
+        <div class="sub">Buat deck flashcard manual atau generate otomatis dengan Groq. Semua data tersimpan aman di
+            browser kamu.</div>
+
+        <!-- AI Settings -->
+        <div class="panel">
+            <div class="section-title">AI Settings</div>
+            <div class="grid-2">
+                <div>
+                    <label>Groq API Key</label>
+                    <input id="groqKey" type="text" placeholder="grq_xxx... (disimpan lokal sementara)">
+                    <div class="inline-note">Kamu bisa dapatkan API key gratis di dashboard Groq. Jangan pakai key
+                        produksi di publik.</div>
+                </div>
+                <div class="grid-2">
+                    <div>
+                        <label>Model</label>
+                        <select id="model">
+                            <option value="deepseek-r1-distill-llama-70b">deepseek-r1-distill-llama-70b</option>
+                            <option value="openai/gpt-oss-120b">openai/gpt-oss-120b</option>
+                            <option value="llama-3.3-70b-versatile">llama-3.3-70b-versatile</option>
+                            <option value="gemma2-9b-it">gemma2-9b-it</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label>Jumlah Kartu (AI)</label>
+                        <input id="aiCount" type="number" min="1" max="30" value="6">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Create Deck -->
+        <div class="panel">
+            <div class="section-title">Create Deck</div>
+        <div class="space-y-4">
+            <!-- Deck Name -->
+            <div>
+                <label for="deckName" class="block text-sm font-medium text-gray-700 mb-1">
+                    Deck Name
+                </label>
+                <input id="deckName" type="text" placeholder="Contoh: Biologi Sel, Grammar Basics"
+                    class="w-full p-2 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+            </div>
+        
+            <!-- Deck Description -->
+            <div>
+                <label for="deckDesc" class="block text-sm font-medium text-gray-700 mb-1">
+                    Deck Description
+                </label>
+                <textarea id="deckDesc" placeholder="Contoh: Istilah sel, fungsi organel, definisi singkat" rows="3"
+                    class="w-full p-2 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none overflow-hidden"></textarea>
+            </div>
+        </div>
+
+            <div class="sep"></div>
+
+            <div class="toolbar">
+                <button class="btn btn-ghost" id="btnAddRow">➕ Add Q&A Row</button>
+                <button class="btn btn-primary" id="btnGenAI">✨ Generate AI Flashcards</button>
+                <span id="aiStatus" class="status"></span>
+            </div>
+
+            <div id="qaContainer" style="margin-top:12px;"></div>
+
+            <div class="sep"></div>
+
+            <div class="toolbar">
+                <button class="btn btn-ok" id="btnCreateDeck">Save Deck</button>
+                <span class="muted">Tips: kamu bisa mix — generate dengan AI lalu edit/tambah manual sebelum
+                    Save.</span>
+            </div>
+        </div>
+
+        <!-- Decks -->
+        <div id="decks"></div>
+    </div>
+
+    <script>
+         const textarea = document.getElementById("deckDesc");
+
+        textarea.addEventListener("input", () => {
+            textarea.style.height = "auto"; // reset dulu
+            textarea.style.height = textarea.scrollHeight + "px"; // sesuaikan dengan konten
+        });
+        // --- STATE ---
+        const decksKey = 'flashcardDecks_v2';
+        let decks = JSON.parse(localStorage.getItem(decksKey) || '[]');
+
+        // --- EL ---
+        const qaContainer = document.getElementById('qaContainer');
+        const btnAddRow = document.getElementById('btnAddRow');
+        const btnGenAI = document.getElementById('btnGenAI');
+        const btnCreate = document.getElementById('btnCreateDeck');
+        const aiStatus = document.getElementById('aiStatus');
+
+        // --- INIT ---
+        addRow(); // start with 1 row
+        renderDecks();
+
+        // --- EVENTS ---
+        btnAddRow.addEventListener('click', () => addRow());
+        btnGenAI.addEventListener('click', generateAI);
+        btnCreate.addEventListener('click', saveDeck);
+
+        // --- FUNCTIONS UI ---
+        function addRow(q = '', a = '') {
+            const row = document.createElement('div');
+            row.className = 'qa-row';
+            row.innerHTML = `
+        <input type="text" class="question" placeholder="Question" value="${escapeHTML(q)}" />
+        <input type="text" class="answer" placeholder="Answer" value="${escapeHTML(a)}" />
+        <button class="btn btn-danger btn-icon" title="Remove">×</button>
+      `;
+            row.querySelector('button').addEventListener('click', () => row.remove());
+            qaContainer.appendChild(row);
+        }
+
+        function getRows() {
+            const qs = Array.from(qaContainer.querySelectorAll('.question'));
+            const as = Array.from(qaContainer.querySelectorAll('.answer'));
+            const items = [];
+            for (let i = 0; i < qs.length; i++) {
+                const q = qs[i].value.trim();
+                const a = as[i].value.trim();
+                if (q && a) items.push({ question: q, answer: a });
+            }
+            return items;
+        }
+
+        function clearRows() {
+            qaContainer.innerHTML = '';
+            addRow();
+        }
+
+        function renderDecks() {
+            const decksDiv = document.getElementById('decks');
+            decksDiv.innerHTML = '';
+            decks.forEach((deck, di) => {
+                const wrap = document.createElement('div');
+                wrap.className = 'panel';
+                wrap.innerHTML = `
+          <div class="deck-title">${escapeHTML(deck.name)}</div>
+          <div class="deck-meta">${escapeHTML(deck.desc || '')}</div>
+          <div class="flashcards"></div>
+          <div class="toolbar" style="margin-top:12px;">
+            <button class="btn btn-danger" data-del="${di}">Delete Deck</button>
+          </div>
+        `;
+                const grid = wrap.querySelector('.flashcards');
+                deck.cards.forEach((c, ci) => {
+                    const card = document.createElement('div');
+                    card.className = 'card';
+                    card.innerHTML = `
+            <div class="card-inner">
+              <div class="face front">${escapeHTML(c.question)}</div>
+              <div class="face back">${escapeHTML(c.answer)}</div>
+            </div>
+            <button class="del" title="Delete card" data-di="${di}" data-ci="${ci}">×</button>
+          `;
+                    card.addEventListener('click', (e) => {
+                        if ((e.target).classList.contains('del')) return;
+                        card.classList.toggle('flipped');
+                    });
+                    card.querySelector('.del').addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        deleteCard(di, ci);
+                    });
+                    grid.appendChild(card);
+                });
+                wrap.querySelector('[data-del]').addEventListener('click', () => deleteDeck(di));
+                decksDiv.appendChild(wrap);
+            });
+        }
+
+        function deleteCard(deckIndex, cardIndex) {
+            decks[deckIndex].cards.splice(cardIndex, 1);
+            if (decks[deckIndex].cards.length === 0) {
+                decks.splice(deckIndex, 1);
+            }
+            persist();
+            renderDecks();
+        }
+
+        function deleteDeck(deckIndex) {
+            if (!confirm('Delete entire deck?')) return;
+            decks.splice(deckIndex, 1);
+            persist();
+            renderDecks();
+        }
+
+        function persist() {
+            localStorage.setItem(decksKey, JSON.stringify(decks));
+        }
+
+        // --- SAVE DECK ---
+    function saveDeck() {
+        const name = document.getElementById('deckName').value.trim();
+        const desc = document.getElementById('deckDesc').value.trim();
+        const cards = getRows();
+        if (!name) { alert('Deck name required'); return; }
+        if (cards.length === 0) { alert('Tambahkan minimal 1 Q&A'); return; }
+
+        // NEW: cek apakah deck dengan nama sama sudah ada
+        const existing = decks.find(d => d.name.toLowerCase() === name.toLowerCase());
+        if (existing) {
+            existing.cards.push(...cards);
+            if (!existing.desc && desc) existing.desc = desc; // update desc kalau kosong
+        } else {
+            decks.push({ name, desc, cards });
+        }
+
+        persist();
+
+        // reset form
+        document.getElementById('deckName').value = '';
+        document.getElementById('deckDesc').value = '';
+        clearRows();
+        renderDecks();
+    }
+
+    function renderDecks() {
+        const decksDiv = document.getElementById('decks');
+        decksDiv.innerHTML = '';
+        decks.forEach((deck, di) => {
+            const wrap = document.createElement('div');
+            wrap.className = 'panel';
+            wrap.innerHTML = `
+          <div class="deck-title" data-fill="${di}">${escapeHTML(deck.name)}</div>
+          <div class="deck-meta">${escapeHTML(deck.desc || '')}</div>
+          <div class="flashcards"></div>
+          <div class="toolbar" style="margin-top:12px;">
+            <button class="btn btn-danger" data-del="${di}">Delete Deck</button>
+          </div>
+        `;
+            const grid = wrap.querySelector('.flashcards');
+            deck.cards.forEach((c, ci) => {
+                const card = document.createElement('div');
+                card.className = 'card';
+                card.innerHTML = `
+            <div class="card-inner">
+              <div class="face front">${escapeHTML(c.question)}</div>
+              <div class="face back">${escapeHTML(c.answer)}</div>
+            </div>
+            <button class="del" title="Delete card" data-di="${di}" data-ci="${ci}">×</button>
+          `;
+                card.addEventListener('click', (e) => {
+                    if ((e.target).classList.contains('del')) return;
+                    card.classList.toggle('flipped');
+                });
+                card.querySelector('.del').addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    deleteCard(di, ci);
+                });
+                grid.appendChild(card);
+            });
+
+            // NEW: klik deck title → prefill deckName & deckDesc
+            wrap.querySelector('[data-fill]').addEventListener('click', () => {
+                document.getElementById('deckName').value = deck.name;
+                document.getElementById('deckDesc').value = deck.desc || '';
+            });
+
+            wrap.querySelector('[data-del]').addEventListener('click', () => deleteDeck(di));
+            decksDiv.appendChild(wrap);
+        });
+    }
+        // --- AI GENERATION (Groq) ---
+        async function generateAI() {
+            const key = document.getElementById('groqKey').value.trim();
+            const model = document.getElementById('model').value;
+            const n = clamp(parseInt(document.getElementById('aiCount').value || '6', 10), 1, 30);
+            const name = document.getElementById('deckName').value.trim();
+            const desc = document.getElementById('deckDesc').value.trim();
+
+            if (!key) { alert('Masukkan Groq API key dulu'); return; }
+            if (!name && !desc) { alert('Isi Deck Name atau Description agar AI punya konteks'); return; }
+
+            setAIStatus('Generating…', true);
+            btnGenAI.disabled = true;
+
+            const sys = "You create concise, accurate study flashcards as JSON only. Output strictly a JSON array of objects with keys: question, answer. Answers are short (<= 2 sentences). Avoid markdown or extra text.";
+            const user = [
+                `Topic: ${name || '(no name provided)'}`,
+                `Description: ${desc || '(no description)'}`,
+                `Generate ${n} flashcards.`,
+                `Return ONLY a valid JSON array like: [{"question":"...","answer":"..."}]`
+            ].join('\n');
+
+            try {
+                const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + key
+                    },
+                    body: JSON.stringify({
+                        model,
+                        messages: [
+                            { role: 'system', content: sys },
+                            { role: 'user', content: user }
+                        ],
+                        temperature: 0.7
+                    })
+                });
+
+                if (!res.ok) {
+                    const text = await res.text();
+                    throw new Error(`Groq error ${res.status}: ${text}`);
+                }
+
+                const json = await res.json();
+                const content = json?.choices?.[0]?.message?.content || '';
+                const parsed = safeParseJSON(content);
+                if (!Array.isArray(parsed)) throw new Error('AI did not return an array');
+
+                // append to form rows (let user review/edit before Save)
+                parsed.forEach(item => {
+                    if (item?.question && item?.answer) addRow(item.question, item.answer);
+                });
+
+                setAIStatus(`Generated ${parsed.length} cards. Review & Save.`, false);
+            } catch (err) {
+                console.error(err);
+                setAIStatus('Failed: ' + (err.message || err), false);
+                alert('AI generation failed. Detail di console.');
+            } finally {
+                btnGenAI.disabled = false;
+            }
+        }
+
+        // --- UTIL ---
+        function clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
+
+        function escapeHTML(s) {
+            return String(s).replace(/[&<>"']/g, m => (
+                { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]
+            ));
+        }
+
+        function setAIStatus(msg, loading) {
+            aiStatus.innerHTML = loading
+                ? `<span class="spinner"></span>${escapeHTML(msg)}`
+                : escapeHTML(msg);
+        }
+
+        function safeParseJSON(str) {
+            // try direct parse
+            try { return JSON.parse(str); } catch { }
+            // try extract code block ```json ... ```
+            const block = str.match(/```json([\s\S]*?)```/i) || str.match(/```([\s\S]*?)```/i);
+            if (block && block[1]) {
+                try { return JSON.parse(block[1]); } catch { }
+            }
+            // try extract first [...] JSON array
+            const arr = str.match(/\[[\s\S]*\]/);
+            if (arr) {
+                try { return JSON.parse(arr[0]); } catch { }
+            }
+            throw new Error('Unable to parse AI JSON');
+        }
+    </script>
+</body>
+
+</html>
